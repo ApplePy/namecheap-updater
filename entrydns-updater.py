@@ -63,7 +63,7 @@ def get_ip():
 	Returns:
 		Public IP as a string
 	'''
-	public_ip = json.load(urlopen('http://httpbin.org/ip'))['origin']
+	public_ip = json.load(urlopen('https://httpbin.org/ip'))['origin']
 	return public_ip
 
 def load_hosts():
