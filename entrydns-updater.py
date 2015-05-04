@@ -15,11 +15,11 @@ import ctypes
 
 FILE_ATTRIBUTE_HIDDEN = 0x02
 
-def hide_file_windows(file)
-    ret = ctypes.windll.kernel32.SetFileAttributesW(file,
+def hide_file_windows(filename):
+    ret = ctypes.windll.kernel32.SetFileAttributesA(filename,
                                                 FILE_ATTRIBUTE_HIDDEN)
     if ret:
-        print 'attribute set to Hidden'
+        print 'Cache attribute set to Hidden'
     else:  # return code of zero indicates failure, raise Windows error
         raise ctypes.WinError()
 
@@ -34,7 +34,7 @@ def get_cached_ip():
 		cached_ip: Cached IP or 0 to force refresh of public IP
 	'''
 	try:
-		cached_file = open(SCRIPT_PATH + '.entrydns-cachedip', 'r')
+		cached_file = open(SCRIPT_PATH + 'entrydns-cachedip.txt', 'r')
 		cached_ip = cached_file.read()
 		cached_file.close()
 		return cached_ip
@@ -49,10 +49,10 @@ def set_cached_ip(ip):
 		ip: Address to be Cached
 	'''
 	try:
-		cached_file = open(SCRIPT_PATH + '.entrydns-cachedip', 'w')
+		cached_file = open(SCRIPT_PATH + 'entrydns-cachedip.txt', 'w')
 		cached_file.write(ip)
 		cached_file.close()
-		hide_file_windows(SCRIPT_PATH + '.entrydns-cachedip')
+		hide_file_windows(SCRIPT_PATH + 'entrydns-cachedip.txt')
 	except IOError, e:
 		print e
 
