@@ -11,8 +11,19 @@ from urllib2 import urlopen
 import requests
 import os
 from time import strftime
+import ctypes
 
-SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__)) +"/"
+FILE_ATTRIBUTE_HIDDEN = 0x02
+
+def hide_file_windows(file)
+    ret = ctypes.windll.kernel32.SetFileAttributesW(file,
+                                                FILE_ATTRIBUTE_HIDDEN)
+    if ret:
+        print 'attribute set to Hidden'
+    else:  # return code of zero indicates failure, raise Windows error
+        raise ctypes.WinError()
+
+SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__)) +"\\"
 
 def get_cached_ip():
 	'''
@@ -41,6 +52,7 @@ def set_cached_ip(ip):
 		cached_file = open(SCRIPT_PATH + '.entrydns-cachedip', 'w')
 		cached_file.write(ip)
 		cached_file.close()
+		hide_file_windows(SCRIPT_PATH + '.entrydns-cachedip')
 	except IOError, e:
 		print e
 
