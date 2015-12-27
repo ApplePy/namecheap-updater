@@ -9,8 +9,10 @@ the hosts.json file.
 import ctypes
 import json
 import os
+import sys
 from time import strftime
 from urllib.request import urlopen
+import xml.etree.ElementTree as ET
 
 import requests
 
@@ -41,7 +43,8 @@ def get_cached_ip():
         cached_ip = cached_file.read()
         cached_file.close()
         return cached_ip
-    except IOError:
+    except IOError as error:
+        print("Error reading cache. Errno error: " + error.errno, file=sys.stderr)
         return "0"
 
 
@@ -56,7 +59,7 @@ def set_cached_ip(ip):
         cached_file = open(SCRIPT_PATH + 'entrydns-cachedip.txt', 'w')
         cached_file.write(ip)
         cached_file.close()
-        hide_file_windows(SCRIPT_PATH + 'entrydns-cachedip.txt')
+        #hide_file_windows(SCRIPT_PATH + 'entrydns-cachedip.txt')
     except IOError as e:
         print(e)
 
@@ -87,10 +90,10 @@ def load_hosts():
         hosts_data = json.load(hosts_file)
         return hosts_data
     except IOError as e:
-        print(e)
+        print(e, file=sys.stderr)
 
 
-def update_host(token, current_ip):
+def update_host(domain, token, current_ip):
     """
     Formulate and Execute an Update request on EntryDNS API for a given access token / IP
 
@@ -101,13 +104,15 @@ def update_host(token, current_ip):
     Returns: 
         Status (Either OK, or Error + Code)
     """
-    url = 'https://entrydns.net/records/modify/%s' % token
-    payload = 'ip=%s' % current_ip
-    response = requests.post(url, data=payload)
-    if response.status_code == requests.codes.ok:
+    url = 'https://dynamicdns.park-your-domain.com/update?host=@&domain={0}&password={1}&ip={2}'.format(domain, token, current_ip)
+    response = requests.get(url)
+    rootET = ET.fromstring(response.text)
+    error_count = int(rootET.find("ErrCount").text)
+    if error_count == 0:
         return "OK"
     else:
-        return "ERROR: Code %s" % response.status_code
+        errtext = rootET.find("errors").find("Err1").text
+        return "ERROR: {0}".format(errtext)
 
 
 def main():
@@ -117,7 +122,7 @@ def main():
         set_cached_ip(current_ip)
         hosts = load_hosts()
         for host in hosts:
-            result = update_host(hosts[host], current_ip)
+            result = update_host(host, hosts[host], current_ip)
             print("%s -- Updating %s: %s" % (strftime("%Y-%m-%d %H:%M:%S"), host, result))
     else:
         print("%s -- Public IP Matches Cache (%s), Nothing to Do..." % (strftime("%Y-%m-%d %H:%M:%S"), current_ip))
