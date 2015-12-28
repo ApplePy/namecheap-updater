@@ -24,6 +24,14 @@ class SearchStack(list):
         return val
 
 
+class HandlerSeparation(logging.Filter):
+    def filter(self, record):
+        if record.levelno < 40:  # Only want events that won't be handled by the error-level handler
+            return True
+        else:
+            return False
+
+
 FILE_ATTRIBUTE_HIDDEN = 0x02
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 CACHE_FILENAME = 'cachedip.txt'
@@ -40,6 +48,9 @@ while len(locations) > 0:
         os.mkdir(locations.pop())
     else:
         head, tail = os.path.split(locations.peek())
+        if len(head) == 0:
+            print("Failed to create logging file!", file=sys.stderr)
+            raise ValueError("Failed to create logging file location!")
         locations.append(head)
 del locations
 
@@ -57,6 +68,7 @@ stdout_handler.setLevel(logging.INFO)  # setup logging levels for destinations
 stderr_handler.setLevel(logging.ERROR)
 outfile_handler.setLevel(logging.INFO)
 errfile_handler.setLevel(logging.ERROR)
+stdout_handler.addFilter(HandlerSeparation())
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.INFO)
