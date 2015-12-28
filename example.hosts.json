@@ -1,4 +1,18 @@
 {
-	"reference-id":"entrydns-access-token",
-	"reference-id-2":"entrydns-access-token2"
+  "example-host": [
+    {
+      "subdomain": "test",
+      "token": "678dxjvid928skf"
+    },
+    {
+      "subdomain": "test2",
+      "token": "567doj049928s35"
+    }
+  ],
+  "example-host2": [
+    {
+      "subdomain": "@",
+      "token": "8299fd0as88fd8d"
+    }
+  ]
 }
