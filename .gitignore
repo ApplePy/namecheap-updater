@@ -4,3 +4,4 @@
 hosts.json
 cachedip.txt
 *.log
+logs/
