@@ -6,18 +6,64 @@ the hosts.json file.
 """
 import ctypes
 import json
+import logging
 import os
 import sys
 import xml.etree.ElementTree as ET
-from time import strftime
 from urllib.request import urlopen
 
 import requests
+
+
+class SearchStack(list):
+    found_top = False
+
+    def peek(self):
+        val = self.pop()
+        self.append(val)
+        return val
+
 
 FILE_ATTRIBUTE_HIDDEN = 0x02
 SCRIPT_PATH = os.path.dirname(os.path.realpath(__file__))
 CACHE_FILENAME = 'cachedip.txt'
 CACHE_FILE_PATH = os.path.join(SCRIPT_PATH, CACHE_FILENAME)
+LOG_LOCATION = os.path.join(SCRIPT_PATH, "logs")
+
+# Create log location if it does not exist
+locations = SearchStack((LOG_LOCATION,))
+while len(locations) > 0:
+    if os.path.exists(locations.peek()):
+        locations.pop()
+        locations.found_top = True
+    elif locations.found_top:
+        os.mkdir(locations.pop())
+    else:
+        head, tail = os.path.split(locations.peek())
+        locations.append(head)
+del locations
+
+# Logging
+log_format = logging.Formatter("[%(levelname)s] %(asctime)s -- %(message)s")  # set log format
+stdout_handler = logging.StreamHandler(sys.stdout)  # setup destinations for logger
+stderr_handler = logging.StreamHandler(sys.stderr)
+outfile_handler = logging.FileHandler(os.path.join(LOG_LOCATION, "output.log"))
+errfile_handler = logging.FileHandler(os.path.join(LOG_LOCATION, "errors.log"))
+stderr_handler.setFormatter(log_format)  # setup output format for destinations
+stdout_handler.setFormatter(log_format)
+outfile_handler.setFormatter(log_format)
+errfile_handler.setFormatter(log_format)
+stdout_handler.setLevel(logging.INFO)  # setup logging levels for destinations
+stderr_handler.setLevel(logging.ERROR)
+outfile_handler.setLevel(logging.INFO)
+errfile_handler.setLevel(logging.ERROR)
+
+log = logging.getLogger(__name__)
+log.setLevel(logging.INFO)
+log.addHandler(outfile_handler)
+log.addHandler(errfile_handler)
+log.addHandler(stderr_handler)
+log.addHandler(stdout_handler)
 
 
 def hide_file_windows(filename):
@@ -31,8 +77,9 @@ def hide_file_windows(filename):
     """
     ret = ctypes.windll.kernel32.SetFileAttributes(filename, FILE_ATTRIBUTE_HIDDEN)
     if ret:
-        print('Cache attribute set to Hidden')
+        log.info('Cache attribute set to Hidden')
     else:  # return code of zero indicates failure, raise Windows error
+        log.error("File could not be set to Hidden!")
         raise ctypes.WinError(ret)
 
 
@@ -50,8 +97,7 @@ def get_cached_ip():
         cached_file.close()
         return cached_ip
     except IOError as error:
-        print("{0} -- Error reading cache. Errno error: {1}".format(strftime("%Y-%m-%d %H:%M:%S"), error.errno),
-              file=sys.stderr)
+        log.error("Error reading cache. Errno error: {0}".format(error.errno))
         return "0"
 
 
@@ -70,7 +116,7 @@ def set_cached_ip(ip):
         cached_file.close()
         # hide_file_windows(CACHE_FILE_PATH)
     except (IOError or ctypes.WinError) as e:
-        print("{0} -- {1}".format(strftime("%Y-%m-%d %H:%M:%S"), e), file=sys.stderr)
+        log.error("{0}".format(e))
 
 
 def get_ip():
@@ -83,9 +129,7 @@ def get_ip():
 
     response = urlopen('https://httpbin.org/ip')
     if response.status != 200:
-        print("{0} -- Status: {1}Reason: {2}}".format(strftime("%Y-%m-%d %H:%M:%S"),
-                                                      response.status,
-                                                      response.reason), file=sys.stderr)
+        log.error("Status: {0} Reason: {1}}".format(response.status, response.reason))
         sys.exit(2)
     response_text = (response.read()).decode("utf-8")
 
@@ -125,7 +169,7 @@ def load_hosts():
         hosts_data = json.load(hosts_file)
         return hosts_data
     except IOError as e:
-        print("{0} -- {1}".format(strftime("%Y-%m-%d %H:%M:%S"), e), file=sys.stderr)
+        log.error("{0}".format(e))
         sys.exit(1)
 
 
@@ -163,9 +207,12 @@ def main():
         for host in hosts:
             for sub in hosts[host]:
                 result = update_host(domain=host, subdomain=sub['subdomain'], token=sub['token'], current_ip=current_ip)
-                print("%s -- Updating %s: %s" % (strftime("%Y-%m-%d %H:%M:%S"), sub['subdomain'] + '.' + host, result))
+                if result == "OK":
+                    log.info("Updating %s: %s" % (sub['subdomain'] + '.' + host, result))
+                else:
+                    log.error("Updating %s: %s" % (sub['subdomain'] + '.' + host, result))
     else:
-        print("%s -- Public IP Matches Cache (%s), Nothing to Do..." % (strftime("%Y-%m-%d %H:%M:%S"), current_ip))
+        log.info("Public IP Matches Cache ({0}), Nothing to Do...".format(current_ip))
 
 
 if __name__ == "__main__":
