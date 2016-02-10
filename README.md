@@ -12,7 +12,7 @@ A basic python script to update Namecheap DNS A Records providing dynamic DNS on
 
 The ddns-updater script can update as many hosts as you would like to your current public IP address. In order to configure the script, see the `example.hosts.json` file for the expected format. This file should be created/renamed as `hosts.json`.
 
-Running the script will read your current IP address and check it against a cache file, this is to prevent you spamming EntryDNS with update requests if no update is needed. The cache file is automatically created and resides within the ddns-updater directory as `cachedip.txt`.
+Running the script will read your current IP address and check it against a cache file, this is to prevent you spamming your DNS host with update requests if no update is needed. The cache file is automatically created and resides within the ddns-updater directory as `cachedip.txt`.
 
 When your public IP does not match this cache, an update request will be performed for each entry within the `hosts.json` file.
 
