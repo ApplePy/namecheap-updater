@@ -145,7 +145,7 @@ def get_ip():
         sys.exit(2)
     response_text = (response.read()).decode("utf-8")
 
-    public_ip = json.loads(response_text)['origin']
+    public_ip = json.loads(response_text)['origin'].split(',')[0]
     return public_ip
 
 
